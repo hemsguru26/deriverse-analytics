@@ -1,0 +1,2042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deriverse — Trading Analytics</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+
+  :root {
+    --bg: #080c14;
+    --surface: #0d1520;
+    --surface2: #121c2e;
+    --border: rgba(99,179,237,0.12);
+    --border2: rgba(99,179,237,0.06);
+    --cyan: #00d4ff;
+    --green: #00ff94;
+    --red: #ff3864;
+    --orange: #ff9500;
+    --purple: #a855f7;
+    --yellow: #ffd60a;
+    --text: #e2eaf7;
+    --muted: #5a7499;
+    --font-mono: 'Space Mono', monospace;
+    --font-sans: 'DM Sans', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border2);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border2);
+  }
+
+  .logo-mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .logo-text {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  .logo-sub {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding-left: 38px;
+  }
+
+  .wallet-chip {
+    margin: 12px 16px;
+    padding: 8px 12px;
+    background: rgba(0,212,255,0.06);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .wallet-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .wallet-addr {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--cyan);
+    letter-spacing: 0.5px;
+  }
+
+  .nav {
+    flex: 1;
+    padding: 8px 0;
+    overflow-y: auto;
+  }
+
+  .nav-section {
+    padding: 16px 16px 4px;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: var(--font-mono);
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px;
+    cursor: pointer;
+    border-radius: 0;
+    transition: all 0.15s;
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 500;
+    position: relative;
+    border-left: 2px solid transparent;
+  }
+
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+
+  .nav-item.active {
+    color: var(--cyan);
+    background: rgba(0,212,255,0.06);
+    border-left-color: var(--cyan);
+  }
+
+  .nav-icon { font-size: 14px; width: 16px; text-align: center; }
+
+  .nav-badge {
+    margin-left: auto;
+    background: var(--red);
+    color: white;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+  }
+
+  .demo-toggle {
+    margin: 12px 16px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(0,212,255,0.1));
+    border: 1px solid rgba(168,85,247,0.3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .demo-toggle:hover { border-color: rgba(168,85,247,0.6); }
+  .demo-label { font-size: 11px; color: var(--purple); font-weight: 600; }
+  .demo-status { font-size: 9px; color: var(--green); font-family: var(--font-mono); }
+
+  /* MAIN */
+  .main {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    height: 52px;
+    border-bottom: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+    background: rgba(13,21,32,0.8);
+    backdrop-filter: blur(8px);
+  }
+
+  .page-title {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .breadcrumb {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .filter-pill {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 11px;
+    color: var(--text);
+    cursor: pointer;
+    background: var(--surface2);
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .filter-pill:hover, .filter-pill.active { border-color: var(--cyan); color: var(--cyan); }
+
+  .refresh-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface2);
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-size: 14px;
+  }
+
+  .refresh-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  /* CONTENT */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+  }
+
+  .content::-webkit-scrollbar { width: 4px; }
+  .content::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* PAGE SECTIONS */
+  .page { display: none; }
+  .page.active { display: block; animation: fadeIn 0.2s ease; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* GRID */
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 16px; }
+  .grid-3-2 { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; margin-bottom: 16px; }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-title {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .card-body { padding: 16px; }
+
+  /* STAT CARD */
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-color, var(--cyan)), transparent);
+    opacity: 0.6;
+  }
+
+  .stat-card:hover { border-color: var(--border); transform: translateY(-1px); }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+  }
+
+  .stat-value {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-sub {
+    font-size: 10px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .stat-change { font-weight: 600; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .neu { color: var(--muted); }
+
+  /* CHART CONTAINERS */
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  canvas { display: block; width: 100% !important; }
+
+  /* GAUGE */
+  .gauge-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+
+  .gauge-value {
+    font-family: var(--font-mono);
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    margin-top: -8px;
+  }
+
+  .gauge-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  /* HEATMAP */
+  .heatmap-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    padding: 12px 16px;
+  }
+
+  .heatmap-cell {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.1s;
+    position: relative;
+  }
+
+  .heatmap-cell:hover { transform: scale(1.5); z-index: 10; }
+
+  .heatmap-months {
+    display: flex;
+    gap: 0;
+    padding: 0 16px 4px;
+  }
+
+  .month-label {
+    font-size: 9px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    flex: 1;
+  }
+
+  /* INSIGHTS */
+  .insight-card {
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+
+  .insight-card:hover { transform: translateX(2px); }
+
+  .insight-card.warning { background: rgba(255,149,0,0.06); border-color: rgba(255,149,0,0.25); }
+  .insight-card.success { background: rgba(0,255,148,0.06); border-color: rgba(0,255,148,0.25); }
+  .insight-card.danger { background: rgba(255,56,100,0.08); border-color: rgba(255,56,100,0.3); }
+  .insight-card.info { background: rgba(0,212,255,0.06); border-color: rgba(0,212,255,0.2); }
+
+  .insight-icon { font-size: 18px; margin-top: 1px; }
+  .insight-title { font-size: 12px; font-weight: 600; margin-bottom: 3px; color: var(--text); }
+  .insight-msg { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  /* JOURNAL TABLE */
+  .trade-table { width: 100%; border-collapse: collapse; }
+  .trade-table th {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border2);
+    text-transform: uppercase;
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+  }
+
+  .trade-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border2);
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .trade-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .trade-table tr:last-child td { border-bottom: none; }
+
+  .symbol-chip {
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.2);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--cyan);
+  }
+
+  .dir-long {
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(0,255,148,0.1);
+    border: 1px solid rgba(0,255,148,0.2);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--green);
+  }
+
+  .dir-short {
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(255,56,100,0.1);
+    border: 1px solid rgba(255,56,100,0.2);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--red);
+  }
+
+  .tag-pill {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    background: rgba(168,85,247,0.15);
+    border: 1px solid rgba(168,85,247,0.25);
+    color: var(--purple);
+    margin-right: 3px;
+  }
+
+  /* MONTE CARLO */
+  .mc-container { position: relative; }
+
+  /* SCORE RING */
+  .score-rings {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 16px;
+    gap: 8px;
+  }
+
+  .score-item { text-align: center; }
+
+  .score-ring-label {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: var(--font-mono);
+  }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* BAR MINI */
+  .mini-bar {
+    height: 3px;
+    border-radius: 2px;
+    background: var(--border2);
+    overflow: hidden;
+    margin-top: 6px;
+  }
+
+  .mini-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s ease;
+  }
+
+  /* LONG/SHORT VISUAL */
+  .ls-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--green) var(--long-pct), var(--red) var(--long-pct));
+    margin: 8px 0;
+  }
+
+  .ls-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    font-family: var(--font-mono);
+  }
+
+  /* AI CHAT */
+  .ai-bubble {
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,212,255,0.06));
+    border: 1px solid rgba(168,85,247,0.2);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+
+  .ai-bubble::before {
+    content: 'AI COACH';
+    position: absolute;
+    top: -7px; left: 12px;
+    background: var(--surface);
+    padding: 0 6px;
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: var(--purple);
+    font-family: var(--font-mono);
+  }
+
+  .ai-text { font-size: 12px; line-height: 1.6; color: var(--text); }
+
+  /* RIBBON NOTIFICATION */
+  .demo-ribbon {
+    position: fixed;
+    top: 0;
+    right: 0;
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    color: white;
+    font-size: 9px;
+    font-family: var(--font-mono);
+    letter-spacing: 1px;
+    padding: 3px 14px;
+    transform: rotate(0deg);
+    z-index: 999;
+    border-radius: 0 0 0 6px;
+  }
+
+  /* RESPONSIVE SCROLL area */
+  .table-scroll { overflow-x: auto; }
+
+  /* FILTER BAR */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .fselect {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    cursor: pointer;
+    outline: none;
+  }
+
+  .fselect:focus { border-color: var(--cyan); }
+
+  /* CSV button */
+  .btn {
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid;
+    font-family: var(--font-mono);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    border-color: transparent;
+    color: var(--bg);
+  }
+
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--muted);
+  }
+
+  .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  /* METRIC ROW */
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border2);
+  }
+
+  .metric-row:last-child { border-bottom: none; }
+  .metric-key { font-size: 11px; color: var(--muted); }
+  .metric-val { font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
+
+  /* Animated number */
+  .anim-num { transition: all 0.5s ease; }
+
+  /* SCROLL custom */
+  .table-area { max-height: 380px; overflow-y: auto; }
+  .table-area::-webkit-scrollbar { width: 3px; }
+  .table-area::-webkit-scrollbar-thumb { background: var(--border); }
+
+  /* RISK meter colors */
+  .risk-low { color: var(--green); }
+  .risk-med { color: var(--orange); }
+  .risk-high { color: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="demo-ribbon">DEMO MODE</div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">
+      <div class="logo-icon">◈</div>
+      <span class="logo-text">DERIVERSE</span>
+    </div>
+    <div class="logo-sub">Analytics Terminal</div>
+  </div>
+
+  <div class="wallet-chip">
+    <div class="wallet-dot"></div>
+    <span class="wallet-addr">DRVs7...UdSo</span>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active" onclick="showPage('overview', this)">
+      <span class="nav-icon">◉</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="showPage('performance', this)">
+      <span class="nav-icon">◈</span> Performance
+    </div>
+
+    <div class="nav-section">Analysis</div>
+    <div class="nav-item" onclick="showPage('analytics', this)">
+      <span class="nav-icon">⬡</span> Deep Analytics
+    </div>
+    <div class="nav-item" onclick="showPage('risk', this)">
+      <span class="nav-icon">⚡</span> Risk & Behavior
+      <span class="nav-badge">3</span>
+    </div>
+    <div class="nav-item" onclick="showPage('montecarlo', this)">
+      <span class="nav-icon">∿</span> Monte Carlo
+    </div>
+
+    <div class="nav-section">Journal</div>
+    <div class="nav-item" onclick="showPage('journal', this)">
+      <span class="nav-icon">◫</span> Trade Journal
+    </div>
+    <div class="nav-item" onclick="showPage('insights', this)">
+      <span class="nav-icon">✦</span> AI Coach
+    </div>
+  </nav>
+
+  <div class="demo-toggle" onclick="alert('Connect Phantom Wallet to load live data from Deriverse DEX')">
+    <div>
+      <div class="demo-label">⬡ Demo Mode</div>
+      <div class="demo-status">90 days · 187 trades</div>
+    </div>
+    <span style="color:var(--purple);font-size:16px">⇄</span>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title" id="pageTitle">DASHBOARD</div>
+      <div class="breadcrumb">Deriverse / Analytics</div>
+    </div>
+    <div class="topbar-right">
+      <select class="fselect" style="padding:5px 8px;" onchange="filterByMarket(this.value)">
+        <option value="all">All Markets</option>
+        <option value="PERP">Perp</option>
+        <option value="SPOT">Spot</option>
+        <option value="OPTIONS">Options</option>
+      </select>
+      <select class="fselect" style="padding:5px 8px;" onchange="filterByPeriod(this.value)">
+        <option value="90">90 Days</option>
+        <option value="30">30 Days</option>
+        <option value="7">7 Days</option>
+      </select>
+      <div class="refresh-btn" onclick="refreshData()">↻</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- === OVERVIEW PAGE === -->
+    <div class="page active" id="page-overview">
+      <div class="grid-4">
+        <div class="stat-card" style="--accent-color:var(--green)">
+          <div class="stat-label">Total PnL</div>
+          <div class="stat-value pos" id="s-pnl">+$2,847</div>
+          <div class="stat-sub">
+            <span class="stat-change pos">▲ 28.5%</span> vs capital
+          </div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--cyan)">
+          <div class="stat-label">Win Rate</div>
+          <div class="stat-value" style="color:var(--cyan)" id="s-wr">54.3%</div>
+          <div class="stat-sub">
+            <span class="stat-change pos">102</span> / 187 trades
+          </div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--orange)">
+          <div class="stat-label">Profit Factor</div>
+          <div class="stat-value" style="color:var(--orange)" id="s-pf">1.62</div>
+          <div class="stat-sub">Gross P / Gross L</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--red)">
+          <div class="stat-label">Max Drawdown</div>
+          <div class="stat-value neg" id="s-dd">-12.4%</div>
+          <div class="stat-sub">Peak-to-trough</div>
+        </div>
+      </div>
+
+      <div class="grid-4">
+        <div class="stat-card">
+          <div class="stat-label">Expectancy</div>
+          <div class="stat-value pos">+$15.22</div>
+          <div class="stat-sub">Per trade avg</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Volume</div>
+          <div class="stat-value" style="color:var(--purple)">$847K</div>
+          <div class="stat-sub">187 closed trades</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Fees Paid</div>
+          <div class="stat-value neg">-$312</div>
+          <div class="stat-sub">Fee impact: -10.9%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Net After Fees</div>
+          <div class="stat-value pos">+$2,535</div>
+          <div class="stat-sub">Real take-home PnL</div>
+        </div>
+      </div>
+
+      <div class="grid-2-1">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Equity Curve</span>
+            <span style="font-size:10px;color:var(--green)">▲ +28.5% total</span>
+          </div>
+          <div class="card-body" style="padding:8px 16px 16px">
+            <div class="chart-wrap"><canvas id="equityChart" height="160"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Long / Short Split</span></div>
+          <div class="card-body">
+            <div class="ls-bar" style="--long-pct:58%"></div>
+            <div class="ls-labels">
+              <span class="pos">LONG 58%</span>
+              <span class="neg">SHORT 42%</span>
+            </div>
+            <div style="margin-top:16px">
+              <div class="metric-row"><span class="metric-key">Long Win Rate</span><span class="metric-val pos">57.1%</span></div>
+              <div class="metric-row"><span class="metric-key">Short Win Rate</span><span class="metric-val pos">50.5%</span></div>
+              <div class="metric-row"><span class="metric-key">Long PnL</span><span class="metric-val pos">+$1,743</span></div>
+              <div class="metric-row"><span class="metric-key">Short PnL</span><span class="metric-val pos">+$1,104</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Drawdown</span></div>
+          <div class="card-body" style="padding:8px 16px 16px">
+            <div class="chart-wrap"><canvas id="drawdownChart" height="120"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Volume by Symbol</span></div>
+          <div class="card-body" style="padding:8px 16px 16px">
+            <div class="chart-wrap"><canvas id="symbolChart" height="120"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Scores</span></div>
+          <div class="score-rings" id="scoreRings"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PERFORMANCE PAGE === -->
+    <div class="page" id="page-performance">
+      <div class="grid-4">
+        <div class="stat-card" style="--accent-color:var(--green)">
+          <div class="stat-label">Avg Win</div>
+          <div class="stat-value pos">+$74.30</div>
+          <div class="mini-bar"><div class="mini-bar-fill" style="width:74%;background:var(--green)"></div></div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--red)">
+          <div class="stat-label">Avg Loss</div>
+          <div class="stat-value neg">-$48.90</div>
+          <div class="mini-bar"><div class="mini-bar-fill" style="width:49%;background:var(--red)"></div></div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--green)">
+          <div class="stat-label">Largest Win</div>
+          <div class="stat-value pos">+$482</div>
+          <div class="stat-sub">Trade #47 · SOL-PERP</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--red)">
+          <div class="stat-label">Largest Loss</div>
+          <div class="stat-value neg">-$218</div>
+          <div class="stat-sub">Trade #83 · BTC-PERP</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><span class="card-title">PnL Distribution — Scatter</span></div>
+          <div class="card-body" style="padding:8px 16px 16px">
+            <canvas id="scatterChart" height="200"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Trade Duration Histogram</span></div>
+          <div class="card-body" style="padding:8px 16px 16px">
+            <canvas id="durationChart" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Rolling 30-Day PnL</span></div>
+          <div class="card-body" style="padding:8px 16px 16px">
+            <canvas id="rollingChart" height="150"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Fee Analysis</span></div>
+          <div class="card-body" style="padding:8px 16px 16px">
+            <canvas id="feeChart" height="150"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === ANALYTICS PAGE === -->
+    <div class="page" id="page-analytics">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <span class="card-title">PnL Heatmap — Daily Performance</span>
+          <span style="font-size:10px;color:var(--muted)">Oct 2024 – Dec 2024</span>
+        </div>
+        <div class="heatmap-months" id="heatmapMonths"></div>
+        <div class="heatmap-grid" id="heatmapGrid"></div>
+        <div style="display:flex;align-items:center;gap:8px;padding:0 16px 12px;font-size:10px;color:var(--muted)">
+          <span>Less</span>
+          <div style="display:flex;gap:2px">
+            <div style="width:10px;height:10px;border-radius:2px;background:rgba(255,56,100,0.8)"></div>
+            <div style="width:10px;height:10px;border-radius:2px;background:rgba(255,56,100,0.4)"></div>
+            <div style="width:10px;height:10px;border-radius:2px;background:rgba(99,99,99,0.3)"></div>
+            <div style="width:10px;height:10px;border-radius:2px;background:rgba(0,255,148,0.4)"></div>
+            <div style="width:10px;height:10px;border-radius:2px;background:rgba(0,255,148,0.9)"></div>
+          </div>
+          <span>More profitable</span>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Performance by Hour (UTC)</span></div>
+          <div class="card-body" style="padding:8px 16px 16px">
+            <canvas id="hourChart" height="160"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Performance by Day of Week</span></div>
+          <div class="card-body" style="padding:8px 16px 16px">
+            <canvas id="dowChart" height="160"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Cumulative Fees vs PnL Impact</span></div>
+        <div class="card-body" style="padding:8px 16px 16px">
+          <canvas id="feeCumChart" height="130"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- === RISK PAGE === -->
+    <div class="page" id="page-risk">
+      <div class="grid-3" style="margin-bottom:16px">
+        <div class="card" style="grid-column:span 1">
+          <div class="card-header"><span class="card-title">Risk Score</span></div>
+          <div class="gauge-wrap">
+            <canvas id="riskGauge" width="180" height="100"></canvas>
+            <div class="gauge-value risk-med">42</div>
+            <div class="gauge-label">Moderate Risk</div>
+          </div>
+        </div>
+        <div class="card" style="grid-column:span 2">
+          <div class="card-header"><span class="card-title">Behavioral Alerts</span></div>
+          <div class="card-body">
+            <div class="insight-card warning">
+              <div class="insight-icon">📊</div>
+              <div><div class="insight-title">Overtrading Alert</div><div class="insight-msg">8 days with 5+ trades detected. High-frequency days average 23% lower PnL vs normal days.</div></div>
+            </div>
+            <div class="insight-card danger">
+              <div class="insight-icon">⚠️</div>
+              <div><div class="insight-title">Revenge Trading Detected</div><div class="insight-msg">5 instances of oversized entries following losses within 30 minutes. Avg loss on those: -$87.</div></div>
+            </div>
+            <div class="insight-card warning">
+              <div class="insight-icon">🎲</div>
+              <div><div class="insight-title">Post-Streak Losses</div><div class="insight-msg">3 instances of large losses following 3+ win streaks. Consider reducing size after hot runs.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Leverage Distribution</span></div>
+          <div class="card-body" style="padding:8px 16px 16px">
+            <canvas id="leverageChart" height="160"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Risk Breakdown</span></div>
+          <div class="card-body">
+            <div class="metric-row">
+              <span class="metric-key">Drawdown Severity</span>
+              <span class="metric-val neg">18 / 40</span>
+            </div>
+            <div class="mini-bar"><div class="mini-bar-fill" style="width:45%;background:var(--orange)"></div></div>
+            <div class="metric-row" style="margin-top:10px">
+              <span class="metric-key">Volatility Score</span>
+              <span class="metric-val" style="color:var(--orange)">11 / 20</span>
+            </div>
+            <div class="mini-bar"><div class="mini-bar-fill" style="width:55%;background:var(--orange)"></div></div>
+            <div class="metric-row" style="margin-top:10px">
+              <span class="metric-key">Overtrading</span>
+              <span class="metric-val" style="color:var(--orange)">8 / 20</span>
+            </div>
+            <div class="mini-bar"><div class="mini-bar-fill" style="width:40%;background:var(--yellow)"></div></div>
+            <div class="metric-row" style="margin-top:10px">
+              <span class="metric-key">Sizing Consistency</span>
+              <span class="metric-val pos">5 / 20</span>
+            </div>
+            <div class="mini-bar"><div class="mini-bar-fill" style="width:25%;background:var(--green)"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === MONTE CARLO PAGE === -->
+    <div class="page" id="page-montecarlo">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <span class="card-title">Monte Carlo — 100 Equity Simulations (30-Day Forward)</span>
+          <span style="font-size:10px;color:var(--muted)">Based on historical trade distribution</span>
+        </div>
+        <div class="card-body" style="padding:8px 16px 16px">
+          <canvas id="mcChart" height="280"></canvas>
+        </div>
+      </div>
+      <div class="grid-3">
+        <div class="stat-card" style="--accent-color:var(--green)">
+          <div class="stat-label">Best Case (95th pct)</div>
+          <div class="stat-value pos">+$5,240</div>
+          <div class="stat-sub">Equity: $15,240</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--cyan)">
+          <div class="stat-label">Median Outcome</div>
+          <div class="stat-value" style="color:var(--cyan)">+$870</div>
+          <div class="stat-sub">Equity: $10,870</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--red)">
+          <div class="stat-label">Worst Case (5th pct)</div>
+          <div class="stat-value neg">-$1,820</div>
+          <div class="stat-sub">Equity: $8,180</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === JOURNAL PAGE === -->
+    <div class="page" id="page-journal">
+      <div class="filter-bar">
+        <select class="fselect">
+          <option>All Symbols</option>
+          <option>SOL-PERP</option>
+          <option>BTC-PERP</option>
+          <option>ETH-PERP</option>
+        </select>
+        <select class="fselect">
+          <option>All Directions</option>
+          <option>Long</option>
+          <option>Short</option>
+        </select>
+        <select class="fselect">
+          <option>All Tags</option>
+          <option>Breakout</option>
+          <option>Scalp</option>
+          <option>Trend Follow</option>
+        </select>
+        <button class="btn btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
+        <button class="btn btn-primary" onclick="showAddNote()">+ Add Note</button>
+      </div>
+
+      <div class="card">
+        <div class="table-area">
+          <table class="trade-table" id="journalTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Symbol</th>
+                <th>Dir</th>
+                <th>Entry</th>
+                <th>Exit</th>
+                <th>Size</th>
+                <th>PnL</th>
+                <th>Duration</th>
+                <th>Tags</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody id="journalBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- === AI INSIGHTS PAGE === -->
+    <div class="page" id="page-insights">
+      <div class="ai-bubble" style="margin-bottom:20px">
+        <div class="ai-text">
+          📡 <strong>AI Trade Coach</strong> has analyzed your last 187 trades across 90 days on Deriverse. 
+          Here are your personalized insights based on statistical patterns in your trading behavior.
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="section-header"><span class="section-title">Performance Insights</span></div>
+          <div class="insight-card success">
+            <div class="insight-icon">🌅</div>
+            <div><div class="insight-title">Morning Edge Detected</div><div class="insight-msg">You perform 38% better in morning sessions (UTC 6–12). Consider focusing your primary trading window to these hours for maximum edge extraction.</div></div>
+          </div>
+          <div class="insight-card success">
+            <div class="insight-icon">🎯</div>
+            <div><div class="insight-title">Strong Win Rate on SOL</div><div class="insight-msg">Your SOL-PERP win rate is 61.2% vs overall 54.3%. This is your highest-edge instrument. Consider increasing allocation here.</div></div>
+          </div>
+          <div class="insight-card info">
+            <div class="insight-icon">📅</div>
+            <div><div class="insight-title">Tuesday / Wednesday Best</div><div class="insight-msg">Your best performing days are Tue (+$142 avg) and Wed (+$118 avg). Avoid heavy trading on Mondays where you average -$43/day.</div></div>
+          </div>
+          <div class="insight-card warning">
+            <div class="insight-icon">⚖️</div>
+            <div><div class="insight-title">Unfavorable Risk/Reward</div><div class="insight-msg">Average loss (-$48.90) is 0.66x average win (+$74.30). While positive, R:R could be improved to 1:2 by widening targets on winning setups.</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="section-header"><span class="section-title">Behavioral Patterns</span></div>
+          <div class="insight-card danger">
+            <div class="insight-icon">⚠️</div>
+            <div><div class="insight-title">Revenge Trading Pattern</div><div class="insight-msg">5 instances detected where you entered a trade >1.5x normal size within 30 minutes of a losing trade. These revenge trades averaged -$87 each.</div></div>
+          </div>
+          <div class="insight-card warning">
+            <div class="insight-icon">🔁</div>
+            <div><div class="insight-title">Post-Win-Streak Risk</div><div class="insight-msg">Most losses after 3+ consecutive wins. After a 3-win streak, your next trade loses 64% of the time. Take breaks or reduce size after hot streaks.</div></div>
+          </div>
+          <div class="insight-card info">
+            <div class="insight-icon">💰</div>
+            <div><div class="insight-title">Fee Efficiency Index: 86%</div><div class="insight-msg">86% of your gross profits survive after fees — strong for a high-frequency trader. At scale, consider maker orders to improve this further toward 92%+.</div></div>
+          </div>
+          <div class="insight-card info">
+            <div class="insight-icon">🎯</div>
+            <div><div class="insight-title">Consistency Score: 68/100</div><div class="insight-msg">Your returns show moderate variance. 3 outlier days account for 40% of total PnL. Build a process that creates more consistent daily returns.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end .content -->
+</main>
+
+<script>
+// ========================
+// MOCK DATA GENERATION
+// ========================
+function seededRand(seed) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+function generateTrades() {
+  const trades = [];
+  const symbols = [
+    { name: 'SOL-PERP', type: 'PERP', price: 180 },
+    { name: 'BTC-PERP', type: 'PERP', price: 65000 },
+    { name: 'ETH-PERP', type: 'PERP', price: 3400 },
+    { name: 'SOL-USDC', type: 'SPOT', price: 178 },
+    { name: 'JUP-PERP', type: 'PERP', price: 1.2 },
+  ];
+  
+  let seed = 42;
+  const r = () => { seed++; return seededRand(seed); };
+  const startDate = new Date('2024-10-01');
+  let id = 1;
+
+  for (let day = 0; day < 90; day++) {
+    if (r() < 0.12) continue;
+    const tradesPerDay = Math.floor(r() * 4) + 1;
+    for (let t = 0; t < tradesPerDay; t++) {
+      const sym = symbols[Math.floor(r() * symbols.length)];
+      const dir = r() > 0.50 ? 'LONG' : 'SHORT';
+      const leverage = [1,2,3,5,10][Math.floor(r()*5)];
+      const entryH = Math.floor(r() * 18) + 5;
+      const entryM = Math.floor(r() * 60);
+      const dur = Math.floor(r() * 400) + 5;
+      const entryTime = new Date(startDate); entryTime.setDate(entryTime.getDate()+day); entryTime.setHours(entryH,entryM,0,0);
+      const exitTime = new Date(entryTime.getTime() + dur*60000);
+      const move = (r()-0.47)*0.05;
+      const ep = sym.price*(1+(r()-0.5)*0.04);
+      const xp = ep*(1+(dir==='LONG'?move:-move));
+      const size = (20+r()*180)*leverage;
+      const rawPnl = (xp-ep)/ep*size*(dir==='LONG'?1:-1);
+      const fees = size*0.00045*(1+r()*0.3);
+      const pnl = rawPnl-fees;
+      const tagOpts = ['Breakout','Scalp','Trend','Reversal','News','DCA'];
+      const tags = r()>0.35?[tagOpts[Math.floor(r()*tagOpts.length)]]:[];
+      trades.push({ id: id++, symbol: sym.name, type: sym.type, direction: dir, entryPrice: +ep.toFixed(3), exitPrice: +xp.toFixed(3), size: +size.toFixed(0), leverage, pnl: +pnl.toFixed(2), fees: +fees.toFixed(2), entryTime, exitTime, duration: dur, tags });
+    }
+  }
+  return trades;
+}
+
+const trades = generateTrades();
+const STARTING_EQUITY = 10000;
+
+// EQUITY CURVE
+function buildEquityCurve(trades) {
+  const byDay = {};
+  trades.forEach(t => {
+    const k = t.entryTime.toISOString().slice(0,10);
+    if (!byDay[k]) byDay[k] = {pnl:0,trades:0};
+    byDay[k].pnl += t.pnl; byDay[k].trades++;
+  });
+  let eq = STARTING_EQUITY, peak = eq;
+  return Object.entries(byDay).sort().map(([date,v]) => {
+    eq += v.pnl; if(eq>peak) peak=eq;
+    const dd = peak-eq, ddPct = peak>0?dd/peak:0;
+    return { date, equity: eq, pnl: v.pnl, dd, ddPct, trades: v.trades };
+  });
+}
+
+const equityCurve = buildEquityCurve(trades);
+
+// COLORS
+const C = {
+  cyan: '#00d4ff', green: '#00ff94', red: '#ff3864',
+  orange: '#ff9500', purple: '#a855f7', yellow: '#ffd60a',
+  surface2: '#121c2e', muted: '#5a7499',
+  grid: 'rgba(99,179,237,0.06)'
+};
+
+const fontMono = "'Space Mono', monospace";
+
+// CHART DEFAULTS
+Chart = undefined; // will use our own canvas drawing
+
+// ========================
+// CANVAS DRAWING ENGINE
+// ========================
+
+function clearCanvas(ctx, canvas) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+  canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+}
+
+function W(canvas) { return canvas.offsetWidth; }
+function H(canvas) { return canvas.offsetHeight; }
+
+function drawGrid(ctx, w, h, pad) {
+  ctx.strokeStyle = C.grid;
+  ctx.lineWidth = 0.5;
+  for(let i=0;i<5;i++){
+    const y = pad.t + (h-pad.t-pad.b)*(i/4);
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+  }
+}
+
+function drawLabel(ctx, text, x, y, color='#5a7499', size=9, align='left') {
+  ctx.font = `${size}px ${fontMono}`;
+  ctx.fillStyle = color;
+  ctx.textAlign = align;
+  ctx.fillText(text, x, y);
+}
+
+// === EQUITY CHART ===
+function drawEquityChart() {
+  const canvas = document.getElementById('equityChart');
+  if (!canvas) return;
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = canvas.offsetHeight * devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  const pad = { t:10, r:10, b:22, l:50 };
+  const pw = w-pad.l-pad.r, ph = h-pad.t-pad.b;
+
+  const equities = equityCurve.map(d=>d.equity);
+  const minE = Math.min(...equities), maxE = Math.max(...equities);
+  const range = maxE - minE || 1;
+
+  // Grid lines
+  ctx.strokeStyle = C.grid; ctx.lineWidth = 0.5;
+  for(let i=0;i<=4;i++){
+    const y = pad.t + ph*(i/4);
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+    const val = maxE - range*(i/4);
+    drawLabel(ctx, '$'+(val/1000).toFixed(1)+'k', pad.l-4, y+3, C.muted, 8, 'right');
+  }
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t+ph);
+  grad.addColorStop(0, 'rgba(0,212,255,0.3)');
+  grad.addColorStop(1, 'rgba(0,212,255,0)');
+
+  ctx.beginPath();
+  equityCurve.forEach((d,i)=>{
+    const x = pad.l + pw*(i/(equityCurve.length-1));
+    const y = pad.t + ph*(1-(d.equity-minE)/range);
+    if(i===0) { ctx.moveTo(x,y); } else { ctx.lineTo(x,y); }
+  });
+  const lastX = pad.l+pw, lastY = pad.t+ph, firstX = pad.l;
+  ctx.lineTo(lastX, pad.t+ph); ctx.lineTo(firstX, pad.t+ph); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  equityCurve.forEach((d,i)=>{
+    const x = pad.l + pw*(i/(equityCurve.length-1));
+    const y = pad.t + ph*(1-(d.equity-minE)/range);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // X labels
+  const months = ['Oct','Nov','Dec'];
+  months.forEach((m,i) => drawLabel(ctx, m, pad.l + pw*(i/2), h-4, C.muted, 8));
+}
+
+// === DRAWDOWN CHART ===
+function drawDrawdownChart() {
+  const canvas = document.getElementById('drawdownChart');
+  if(!canvas) return;
+  canvas.width = canvas.offsetWidth*devicePixelRatio;
+  canvas.height = canvas.offsetHeight*devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  const pad = {t:8,r:8,b:18,l:42};
+  const pw = w-pad.l-pad.r, ph = h-pad.t-pad.b;
+
+  const dds = equityCurve.map(d=>d.ddPct*100);
+  const maxDD = Math.max(...dds, 0.01);
+
+  ctx.strokeStyle = C.grid; ctx.lineWidth = 0.5;
+  [0,0.5,1].forEach(f=>{
+    const y = pad.t + ph*f;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+    drawLabel(ctx, '-'+(maxDD*f).toFixed(1)+'%', pad.l-4, y+3, C.muted, 7, 'right');
+  });
+
+  const grad = ctx.createLinearGradient(0,pad.t,0,pad.t+ph);
+  grad.addColorStop(0,'rgba(255,56,100,0.4)');
+  grad.addColorStop(1,'rgba(255,56,100,0)');
+
+  ctx.beginPath();
+  equityCurve.forEach((d,i)=>{
+    const x = pad.l + pw*(i/(equityCurve.length-1));
+    const y = pad.t + ph*(d.ddPct*100/maxDD);
+    if(i===0) ctx.moveTo(x,pad.t); else ctx.lineTo(x,y);
+  });
+  ctx.lineTo(pad.l+pw, pad.t+ph); ctx.lineTo(pad.l, pad.t+ph); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+
+  ctx.beginPath();
+  equityCurve.forEach((d,i)=>{
+    const x = pad.l + pw*(i/(equityCurve.length-1));
+    const y = pad.t + ph*(d.ddPct*100/maxDD);
+    if(i===0) ctx.moveTo(x,pad.t); else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle = C.red; ctx.lineWidth = 1.2; ctx.stroke();
+}
+
+// === SYMBOL BAR CHART ===
+function drawSymbolChart() {
+  const canvas = document.getElementById('symbolChart');
+  if(!canvas) return;
+  canvas.width = canvas.offsetWidth*devicePixelRatio;
+  canvas.height = canvas.offsetHeight*devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+
+  const bySymbol = {};
+  trades.forEach(t=>{if(!bySymbol[t.symbol])bySymbol[t.symbol]={vol:0,pnl:0};bySymbol[t.symbol].vol+=t.size;bySymbol[t.symbol].pnl+=t.pnl;});
+  const syms = Object.entries(bySymbol).sort((a,b)=>b[1].vol-a[1].vol);
+  const maxVol = Math.max(...syms.map(s=>s[1].vol));
+  const barH = Math.min(20, (h-20)/syms.length - 6);
+  const colors = [C.cyan, C.green, C.purple, C.orange, C.yellow];
+
+  syms.forEach(([sym,v],i)=>{
+    const y = 10 + i*(barH+6);
+    const bw = (v.vol/maxVol)*(w-100);
+    const color = colors[i%colors.length];
+    
+    ctx.fillStyle = color+'33';
+    ctx.beginPath(); roundRect(ctx, 60, y, bw, barH, 3); ctx.fill();
+    ctx.fillStyle = color;
+    ctx.beginPath(); roundRect(ctx, 60, y, Math.max(bw,2), barH, 3); ctx.fill();
+
+    ctx.font = `9px ${fontMono}`; ctx.fillStyle = C.muted; ctx.textAlign = 'right';
+    ctx.fillText(sym.replace('-PERP','').replace('-USDC',''), 56, y+barH/2+3);
+    ctx.textAlign = 'left'; ctx.fillStyle = C.text||'#e2eaf7';
+    ctx.fillText('$'+(v.vol/1000).toFixed(0)+'k', 64+bw, y+barH/2+3);
+  });
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
+}
+
+// === SCORE RINGS ===
+function drawScoreRings() {
+  const container = document.getElementById('scoreRings');
+  if(!container) return;
+  const scores = [
+    { label:'Risk', value:42, color:C.orange, max:100, invert:true },
+    { label:'Consistency', value:68, color:C.cyan, max:100 },
+    { label:'Fee Efficiency', value:86, color:C.green, max:100 },
+  ];
+
+  scores.forEach(s=>{
+    const div = document.createElement('div');
+    div.className = 'score-item';
+    const cvs = document.createElement('canvas');
+    cvs.width = 80; cvs.height = 80;
+    div.appendChild(cvs);
+    const lbl = document.createElement('div');
+    lbl.className = 'score-ring-label';
+    lbl.textContent = s.label;
+    div.appendChild(lbl);
+    container.appendChild(div);
+
+    const ctx = cvs.getContext('2d');
+    const cx=40, cy=40, r=30, lw=6;
+    const pct = s.value/s.max;
+    const start = -Math.PI/2;
+
+    ctx.strokeStyle = s.color+'22'; ctx.lineWidth=lw;
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+
+    ctx.strokeStyle = s.color; ctx.lineWidth=lw;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(cx,cy,r,start,start+Math.PI*2*pct); ctx.stroke();
+
+    ctx.font = `bold 14px ${fontMono}`; ctx.fillStyle = s.color;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(s.value, cx, cy);
+  });
+}
+
+// === SCATTER CHART ===
+function drawScatterChart() {
+  const canvas = document.getElementById('scatterChart');
+  if(!canvas) return;
+  canvas.width = canvas.offsetWidth*devicePixelRatio;
+  canvas.height = canvas.offsetHeight*devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  const pad = {t:10,r:20,b:30,l:55};
+  const pw = w-pad.l-pad.r, ph = h-pad.t-pad.b;
+
+  const sizes = trades.map(t=>t.size);
+  const pnls = trades.map(t=>t.pnl);
+  const maxS = Math.max(...sizes), minP = Math.min(...pnls), maxP = Math.max(...pnls);
+  const pRange = maxP-minP||1;
+
+  // Zero line
+  const zeroY = pad.t + ph*(1-(0-minP)/pRange);
+  ctx.strokeStyle = C.grid; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(pad.l,zeroY); ctx.lineTo(w-pad.r,zeroY); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  [0.25,0.5,0.75,1].forEach(f=>{
+    const y = pad.t+ph*f;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+    drawLabel(ctx, '$'+(maxP-pRange*f).toFixed(0), pad.l-4, y+3, C.muted, 8, 'right');
+  });
+
+  // X labels
+  drawLabel(ctx,'Small',pad.l,h-5,C.muted,8);
+  drawLabel(ctx,'Large',w-pad.r,h-5,C.muted,8,'right');
+  drawLabel(ctx,'Size →',w/2,h-5,C.muted,8,'center');
+
+  trades.forEach(t=>{
+    const x = pad.l + pw*(t.size/maxS);
+    const y = pad.t + ph*(1-(t.pnl-minP)/pRange);
+    const r = 3;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle = t.pnl>0?'rgba(0,255,148,0.5)':'rgba(255,56,100,0.5)';
+    ctx.fill();
+  });
+}
+
+// === DURATION HISTOGRAM ===
+function drawDurationChart() {
+  const canvas = document.getElementById('durationChart');
+  if(!canvas) return;
+  canvas.width = canvas.offsetWidth*devicePixelRatio;
+  canvas.height = canvas.offsetHeight*devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  const pad={t:8,r:10,b:22,l:35};
+  const pw=w-pad.l-pad.r, ph=h-pad.t-pad.b;
+
+  const buckets = [0,30,60,120,240,480,1000];
+  const labels = ['<30m','30m','1h','2h','4h','8h+'];
+  const counts = new Array(buckets.length-1).fill(0);
+  trades.forEach(t=>{
+    for(let i=0;i<buckets.length-1;i++){
+      if(t.duration>=buckets[i]&&t.duration<buckets[i+1]){counts[i]++;break;}
+    }
+  });
+  const maxC = Math.max(...counts);
+  const bw = pw/counts.length - 4;
+
+  counts.forEach((c,i)=>{
+    const x = pad.l + (pw/counts.length)*i + 2;
+    const bh = ph*(c/maxC);
+    const y = pad.t + ph - bh;
+    const g = ctx.createLinearGradient(0,y,0,y+bh);
+    g.addColorStop(0,C.purple);g.addColorStop(1,C.purple+'44');
+    ctx.fillStyle=g;
+    ctx.beginPath(); roundRect(ctx,x,y,bw,bh,3); ctx.fill();
+    drawLabel(ctx,labels[i],x+bw/2,h-5,C.muted,8,'center');
+    if(c>0) drawLabel(ctx,c+'',x+bw/2,y-2,C.purple,8,'center');
+  });
+}
+
+// === ROLLING PNL ===
+function drawRollingChart() {
+  const canvas = document.getElementById('rollingChart');
+  if(!canvas) return;
+  canvas.width = canvas.offsetWidth*devicePixelRatio;
+  canvas.height = canvas.offsetHeight*devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  const pad={t:8,r:10,b:22,l:55};
+  const pw=w-pad.l-pad.r, ph=h-pad.t-pad.b;
+
+  // 30-day rolling PnL
+  const daily = [];
+  const byDay = {};
+  trades.forEach(t=>{const k=t.entryTime.toISOString().slice(0,10);byDay[k]=(byDay[k]||0)+t.pnl;});
+  const sortedDays = Object.entries(byDay).sort();
+  
+  const rolling = [];
+  for(let i=0;i<sortedDays.length;i++){
+    const window = sortedDays.slice(Math.max(0,i-29),i+1);
+    rolling.push({date:sortedDays[i][0],pnl:window.reduce((s,[,v])=>s+v,0)});
+  }
+
+  const pnls = rolling.map(r=>r.pnl);
+  const minP=Math.min(...pnls), maxP=Math.max(...pnls);
+  const range=maxP-minP||1;
+
+  const zeroY = pad.t+ph*(1-(0-minP)/range);
+  ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=0.5;
+  ctx.beginPath();ctx.moveTo(pad.l,zeroY);ctx.lineTo(w-pad.r,zeroY);ctx.stroke();
+  [0,0.5,1].forEach(f=>{
+    const val=minP+range*(1-f);
+    const y=pad.t+ph*f;
+    drawLabel(ctx,'$'+(val>=0?'+':'')+val.toFixed(0),pad.l-4,y+3,C.muted,8,'right');
+  });
+
+  // Area above zero = green, below = red
+  rolling.forEach((d,i)=>{
+    if(i===0)return;
+    const x1=pad.l+pw*(( i-1)/(rolling.length-1));
+    const x2=pad.l+pw*(i/(rolling.length-1));
+    const y1=pad.t+ph*(1-(rolling[i-1].pnl-minP)/range);
+    const y2=pad.t+ph*(1-(d.pnl-minP)/range);
+    ctx.strokeStyle=d.pnl>=0?C.green:C.red;
+    ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  });
+}
+
+// === FEE PIE CHART ===
+function drawFeeChart() {
+  const canvas = document.getElementById('feeChart');
+  if(!canvas) return;
+  canvas.width = canvas.offsetWidth*devicePixelRatio;
+  canvas.height = canvas.offsetHeight*devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+
+  const bySymbol = {};
+  trades.forEach(t=>{if(!bySymbol[t.symbol])bySymbol[t.symbol]=0;bySymbol[t.symbol]+=t.fees;});
+  const entries = Object.entries(bySymbol).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  const total = entries.reduce((s,[,v])=>s+v,0);
+  const colors = [C.cyan,C.purple,C.orange,C.green,C.yellow];
+
+  const cx=h/2, cy=h/2, r=h/2-12;
+  let angle = -Math.PI/2;
+
+  entries.forEach(([sym,v],i)=>{
+    const slice = (v/total)*Math.PI*2;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,angle,angle+slice);
+    ctx.closePath();
+    ctx.fillStyle = colors[i]+'cc'; ctx.fill();
+    ctx.strokeStyle=C.surface2; ctx.lineWidth=2; ctx.stroke();
+    angle+=slice;
+  });
+
+  // Inner hole
+  ctx.beginPath(); ctx.arc(cx,cy,r*0.55,0,Math.PI*2);
+  ctx.fillStyle='#0d1520'; ctx.fill();
+  ctx.font=`bold 10px ${fontMono}`; ctx.fillStyle=C.muted;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('FEES', cx, cy-6);
+  ctx.font=`bold 11px ${fontMono}`; ctx.fillStyle=C.red;
+  ctx.fillText('-$'+total.toFixed(0), cx, cy+8);
+
+  // Legend
+  const lx = h+10;
+  entries.forEach(([sym,v],i)=>{
+    const y = 20+i*26;
+    ctx.fillStyle=colors[i]; ctx.beginPath(); ctx.arc(lx+5,y,5,0,Math.PI*2); ctx.fill();
+    ctx.font=`9px ${fontMono}`; ctx.fillStyle=C.text||'#e2eaf7'; ctx.textAlign='left';
+    ctx.fillText(sym.replace('-PERP','').replace('-USDC',''),lx+14,y+3);
+    ctx.fillStyle=C.muted; ctx.fillText('$'+v.toFixed(0)+' ('+(v/total*100).toFixed(0)+'%)',lx+14,y+14);
+  });
+}
+
+// === HEATMAP ===
+function buildHeatmap() {
+  const byDay = {};
+  trades.forEach(t=>{const k=t.entryTime.toISOString().slice(0,10);if(!byDay[k])byDay[k]={pnl:0,trades:0};byDay[k].pnl+=t.pnl;byDay[k].trades++;});
+  
+  const grid = document.getElementById('heatmapGrid');
+  if(!grid) return;
+  grid.innerHTML='';
+  
+  const start = new Date('2024-10-01');
+  const maxAbs = Math.max(...Object.values(byDay).map(v=>Math.abs(v.pnl)));
+  
+  for(let d=0;d<91;d++){
+    const date = new Date(start); date.setDate(start.getDate()+d);
+    const k = date.toISOString().slice(0,10);
+    const cell = document.createElement('div');
+    cell.className = 'heatmap-cell';
+    if(byDay[k]){
+      const v = byDay[k].pnl;
+      const intensity = Math.min(Math.abs(v)/maxAbs, 1);
+      if(v>0) cell.style.background = `rgba(0,255,148,${0.15+intensity*0.85})`;
+      else cell.style.background = `rgba(255,56,100,${0.15+intensity*0.85})`;
+      cell.title = `${k}: $${v.toFixed(0)} (${byDay[k].trades} trades)`;
+    } else {
+      cell.style.background = 'rgba(255,255,255,0.04)';
+      cell.title = k+': No trades';
+    }
+    grid.appendChild(cell);
+  }
+}
+
+// === HOUR CHART ===
+function drawHourChart() {
+  const canvas = document.getElementById('hourChart');
+  if(!canvas) return;
+  canvas.width = canvas.offsetWidth*devicePixelRatio;
+  canvas.height = canvas.offsetHeight*devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  const pad={t:8,r:10,b:28,l:45};
+  const pw=w-pad.l-pad.r, ph=h-pad.t-pad.b;
+
+  const byHour = {};
+  for(let i=0;i<24;i++) byHour[i]={pnl:0,trades:0};
+  trades.forEach(t=>{const hr=t.entryTime.getUTCHours();byHour[hr].pnl+=t.pnl;byHour[hr].trades++;});
+  const vals = Object.values(byHour).map(v=>v.pnl);
+  const minV=Math.min(...vals), maxV=Math.max(...vals), range=maxV-minV||1;
+  const zeroY = pad.t+ph*(1-(0-minV)/range);
+
+  ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=0.5;
+  ctx.beginPath();ctx.moveTo(pad.l,zeroY);ctx.lineTo(w-pad.r,zeroY);ctx.stroke();
+  drawLabel(ctx,'$0',pad.l-4,zeroY+3,C.muted,8,'right');
+
+  const bw = pw/24-1;
+  Object.entries(byHour).forEach(([hr,v])=>{
+    const x = pad.l+pw*(hr/24)+0.5;
+    const bh = Math.abs(v.pnl)/range*ph;
+    const y = v.pnl>=0 ? zeroY-bh : zeroY;
+    const g = ctx.createLinearGradient(0,y,0,y+bh);
+    if(v.pnl>=0){g.addColorStop(0,C.green);g.addColorStop(1,C.green+'33');}
+    else{g.addColorStop(0,C.red+'33');g.addColorStop(1,C.red);}
+    ctx.fillStyle=g;
+    ctx.beginPath();roundRect(ctx,x,y,bw,Math.max(bh,1),2);ctx.fill();
+    if(hr%6===0) drawLabel(ctx,hr+'h',x+bw/2,h-5,C.muted,8,'center');
+  });
+}
+
+// === DOW CHART ===
+function drawDowChart() {
+  const canvas = document.getElementById('dowChart');
+  if(!canvas) return;
+  canvas.width = canvas.offsetWidth*devicePixelRatio;
+  canvas.height = canvas.offsetHeight*devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  const pad={t:8,r:10,b:28,l:50};
+  const pw=w-pad.l-pad.r, ph=h-pad.t-pad.b;
+
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const byDow={};days.forEach((_,i)=>byDow[i]={pnl:0,trades:0});
+  trades.forEach(t=>{const d=t.entryTime.getUTCDay();byDow[d].pnl+=t.pnl;byDow[d].trades++;});
+  const vals=Object.values(byDow).map(v=>v.pnl);
+  const minV=Math.min(...vals),maxV=Math.max(...vals),range=maxV-minV||1;
+  const zeroY=pad.t+ph*(1-(0-minV)/range);
+
+  ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=0.5;
+  ctx.beginPath();ctx.moveTo(pad.l,zeroY);ctx.lineTo(w-pad.r,zeroY);ctx.stroke();
+
+  const bw=pw/7-4;
+  days.forEach((day,i)=>{
+    const v=byDow[i];
+    const x=pad.l+(pw/7)*i+2;
+    const bh=Math.abs(v.pnl)/range*ph;
+    const y=v.pnl>=0?zeroY-bh:zeroY;
+    ctx.fillStyle=v.pnl>=0?C.cyan+'99':C.red+'99';
+    ctx.beginPath();roundRect(ctx,x,y,bw,Math.max(bh,1),3);ctx.fill();
+    drawLabel(ctx,day,x+bw/2,h-5,C.muted,8,'center');
+    drawLabel(ctx,'$'+v.pnl.toFixed(0),x+bw/2,y-(v.pnl>=0?5:-12),(v.pnl>=0?C.green:C.red),8,'center');
+  });
+}
+
+// === FEE CUMULATIVE ===
+function drawFeeCumChart() {
+  const canvas = document.getElementById('feeCumChart');
+  if(!canvas) return;
+  canvas.width=canvas.offsetWidth*devicePixelRatio;
+  canvas.height=canvas.offsetHeight*devicePixelRatio;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  const w=canvas.offsetWidth,h=canvas.offsetHeight;
+  const pad={t:8,r:10,b:22,l:55};
+  const pw=w-pad.l-pad.r,ph=h-pad.t-pad.b;
+
+  const sorted=[...trades].sort((a,b)=>a.entryTime-b.entryTime);
+  let cumPnl=0,cumFee=0;
+  const pts=sorted.map(t=>{cumPnl+=t.pnl;cumFee+=t.fees;return{pnl:cumPnl,fee:cumFee};});
+  const maxV=Math.max(pts[pts.length-1]?.pnl||0,pts[pts.length-1]?.fee||0);
+
+  [0,0.5,1].forEach(f=>{
+    const y=pad.t+ph*f;
+    ctx.strokeStyle=C.grid;ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();
+    drawLabel(ctx,'$'+((1-f)*maxV).toFixed(0),pad.l-4,y+3,C.muted,8,'right');
+  });
+
+  // PnL line
+  ctx.beginPath();
+  pts.forEach((p,i)=>{
+    const x=pad.l+pw*(i/(pts.length-1));
+    const y=pad.t+ph*(1-p.pnl/maxV);
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle=C.green;ctx.lineWidth=1.5;ctx.stroke();
+
+  // Fee line
+  ctx.beginPath();
+  pts.forEach((p,i)=>{
+    const x=pad.l+pw*(i/(pts.length-1));
+    const y=pad.t+ph*(1-p.fee/maxV);
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle=C.red;ctx.lineWidth=1.5;ctx.setLineDash([4,4]);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Legend
+  ctx.font=`9px ${fontMono}`;
+  ctx.fillStyle=C.green;ctx.textAlign='left';ctx.fillText('Cumulative PnL',pad.l+4,20);
+  ctx.fillStyle=C.red;ctx.fillText('Cumulative Fees',pad.l+4,32);
+}
+
+// === LEVERAGE CHART ===
+function drawLeverageChart() {
+  const canvas = document.getElementById('leverageChart');
+  if(!canvas) return;
+  canvas.width=canvas.offsetWidth*devicePixelRatio;
+  canvas.height=canvas.offsetHeight*devicePixelRatio;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  const w=canvas.offsetWidth,h=canvas.offsetHeight;
+  const pad={t:8,r:10,b:22,l:35};
+  const pw=w-pad.l-pad.r,ph=h-pad.t-pad.b;
+
+  const levs=[1,2,3,5,10];
+  const counts={};levs.forEach(l=>counts[l]=0);
+  trades.forEach(t=>{if(counts[t.leverage]!==undefined)counts[t.leverage]++;});
+  const maxC=Math.max(...Object.values(counts));
+  const bw=pw/levs.length-6;
+  const colors=[C.green,C.cyan,C.yellow,C.orange,C.red];
+
+  levs.forEach((lev,i)=>{
+    const c=counts[lev];
+    const x=pad.l+(pw/levs.length)*i+3;
+    const bh=ph*(c/maxC);
+    const y=pad.t+ph-bh;
+    const g=ctx.createLinearGradient(0,y,0,y+bh);
+    g.addColorStop(0,colors[i]);g.addColorStop(1,colors[i]+'44');
+    ctx.fillStyle=g;ctx.beginPath();roundRect(ctx,x,y,bw,bh,3);ctx.fill();
+    drawLabel(ctx,lev+'x',x+bw/2,h-5,C.muted,9,'center');
+    drawLabel(ctx,c+'',x+bw/2,y-3,colors[i],9,'center');
+  });
+}
+
+// === RISK GAUGE ===
+function drawRiskGauge() {
+  const canvas = document.getElementById('riskGauge');
+  if(!canvas) return;
+  const ctx=canvas.getContext('2d');
+  const w=canvas.width,h=canvas.height;
+  const cx=w/2,cy=h*0.85,r=h*0.72;
+  const startA=Math.PI,endA=0;
+
+  // Background arc
+  ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=10;ctx.lineCap='round';
+  ctx.beginPath();ctx.arc(cx,cy,r,startA,endA,false);ctx.stroke();
+
+  // Colored arc (42/100 = 42% across 180deg)
+  const pct=42/100;
+  const grd=ctx.createLinearGradient(cx-r,cy,cx+r,cy);
+  grd.addColorStop(0,C.green);grd.addColorStop(0.5,C.yellow);grd.addColorStop(1,C.red);
+  ctx.strokeStyle=grd;ctx.lineWidth=10;
+  ctx.beginPath();ctx.arc(cx,cy,r,startA,startA+(endA-startA)*pct,false);ctx.stroke();
+
+  // Tick marks
+  ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
+  [0,25,50,75,100].forEach(v=>{
+    const a=Math.PI+(v/100)*Math.PI;
+    const r2=r+4;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*(r-6),cy+Math.sin(a)*(r-6));
+    ctx.lineTo(cx+Math.cos(a)*(r+2),cy+Math.sin(a)*(r+2));
+    ctx.stroke();
+    ctx.font=`7px ${fontMono}`;ctx.fillStyle=C.muted;ctx.textAlign='center';
+    ctx.fillText(v,cx+Math.cos(a)*(r+12),cy+Math.sin(a)*(r+12));
+  });
+}
+
+// === MONTE CARLO ===
+function drawMonteCarloChart() {
+  const canvas = document.getElementById('mcChart');
+  if(!canvas) return;
+  canvas.width=canvas.offsetWidth*devicePixelRatio;
+  canvas.height=canvas.offsetHeight*devicePixelRatio;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  const w=canvas.offsetWidth,h=canvas.offsetHeight;
+  const pad={t:10,r:10,b:28,l:60};
+  const pw=w-pad.l-pad.r,ph=h-pad.t-pad.b;
+  const periods=30;
+
+  const pnls=trades.map(t=>t.pnl);
+  const runs=[];
+  let seed=99;
+  const sr=()=>{seed++;const x=Math.sin(seed)*10000;return x-Math.floor(x);};
+
+  for(let r=0;r<100;r++){
+    let eq=STARTING_EQUITY;
+    const curve=[eq];
+    for(let p=0;p<periods;p++){
+      const n=Math.floor(sr()*3)+1;
+      for(let s=0;s<n;s++) eq+=pnls[Math.floor(sr()*pnls.length)];
+      curve.push(eq);
+    }
+    runs.push(curve);
+  }
+
+  const allVals=runs.flat();
+  const minV=Math.min(...allVals),maxV=Math.max(...allVals),range=maxV-minV||1;
+  const startLine=pad.t+ph*(1-(STARTING_EQUITY-minV)/range);
+
+  // Grid
+  ctx.strokeStyle=C.grid;ctx.lineWidth=0.5;
+  for(let i=0;i<=4;i++){
+    const y=pad.t+ph*(i/4);
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();
+    const val=maxV-range*(i/4);
+    drawLabel(ctx,'$'+(val/1000).toFixed(1)+'k',pad.l-4,y+3,C.muted,8,'right');
+  }
+
+  // Starting equity line
+  ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(pad.l,startLine);ctx.lineTo(w-pad.r,startLine);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // All sim lines (faint)
+  runs.forEach(curve=>{
+    ctx.beginPath();
+    curve.forEach((v,i)=>{
+      const x=pad.l+pw*(i/periods);
+      const y=pad.t+ph*(1-(v-minV)/range);
+      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    });
+    const final=curve[curve.length-1];
+    ctx.strokeStyle=final>STARTING_EQUITY?'rgba(0,255,148,0.07)':'rgba(255,56,100,0.07)';
+    ctx.lineWidth=0.8;ctx.stroke();
+  });
+
+  // Median line
+  const medians=[];
+  for(let i=0;i<=periods;i++){
+    const vals=runs.map(r=>r[i]).sort((a,b)=>a-b);
+    medians.push(vals[Math.floor(vals.length/2)]);
+  }
+  ctx.beginPath();
+  medians.forEach((v,i)=>{
+    const x=pad.l+pw*(i/periods);
+    const y=pad.t+ph*(1-(v-minV)/range);
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle=C.cyan;ctx.lineWidth=2;ctx.stroke();
+
+  // X axis
+  for(let i=0;i<=5;i++) drawLabel(ctx,'D'+(i*6),pad.l+pw*(i/5),h-5,C.muted,8,'center');
+}
+
+// === JOURNAL TABLE ===
+function buildJournalTable() {
+  const body = document.getElementById('journalBody');
+  if(!body) return;
+  const recent = [...trades].sort((a,b)=>b.entryTime-a.entryTime).slice(0,40);
+  body.innerHTML = recent.map(t=>`
+    <tr>
+      <td style="color:var(--muted);font-family:var(--font-mono)">${t.id}</td>
+      <td><span class="symbol-chip">${t.symbol}</span></td>
+      <td><span class="${t.direction==='LONG'?'dir-long':'dir-short'}">${t.direction}</span></td>
+      <td style="font-family:var(--font-mono);font-size:11px">$${t.entryPrice.toFixed(2)}</td>
+      <td style="font-family:var(--font-mono);font-size:11px">$${t.exitPrice.toFixed(2)}</td>
+      <td style="font-family:var(--font-mono);font-size:11px">$${t.size.toLocaleString()}</td>
+      <td class="${t.pnl>=0?'pos':'neg'}" style="font-family:var(--font-mono);font-weight:700">${t.pnl>=0?'+':''}$${t.pnl.toFixed(0)}</td>
+      <td style="color:var(--muted)">${t.duration<60?t.duration+'m':Math.floor(t.duration/60)+'h '+t.duration%60+'m'}</td>
+      <td>${t.tags.map(tag=>`<span class="tag-pill">${tag}</span>`).join('')}</td>
+      <td style="color:var(--muted);font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.id%3===0?'📝 Setup on daily S/R':''}</td>
+    </tr>
+  `).join('');
+}
+
+// === NAVIGATION ===
+function showPage(page, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  if(el) el.classList.add('active');
+  const titles = {overview:'DASHBOARD',performance:'PERFORMANCE',analytics:'DEEP ANALYTICS',risk:'RISK & BEHAVIOR',montecarlo:'MONTE CARLO',journal:'TRADE JOURNAL',insights:'AI COACH'};
+  document.getElementById('pageTitle').textContent = titles[page]||page.toUpperCase();
+  
+  setTimeout(()=>{
+    if(page==='overview'){drawEquityChart();drawDrawdownChart();drawSymbolChart();}
+    if(page==='performance'){drawScatterChart();drawDurationChart();drawRollingChart();drawFeeChart();}
+    if(page==='analytics'){buildHeatmap();drawHourChart();drawDowChart();drawFeeCumChart();}
+    if(page==='risk'){drawRiskGauge();drawLeverageChart();}
+    if(page==='montecarlo'){drawMonteCarloChart();}
+    if(page==='journal'){buildJournalTable();}
+  },50);
+}
+
+function filterByMarket(v){ console.log('Filter market:', v); }
+function filterByPeriod(v){ console.log('Filter period:', v); }
+function refreshData(){ location.reload(); }
+function exportCSV(){
+  const rows = [['ID','Symbol','Direction','Entry','Exit','PnL','Fees','Duration','Tags']];
+  trades.forEach(t=>rows.push([t.id,t.symbol,t.direction,t.entryPrice,t.exitPrice,t.pnl,t.fees,t.duration,t.tags.join(';')]));
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='deriverse_trades.csv'; a.click();
+}
+function showAddNote(){ alert('In full app: opens a modal to add journal notes, strategy tags, and screenshot uploads.'); }
+
+// === INIT ===
+window.addEventListener('load', ()=>{
+  setTimeout(()=>{
+    drawEquityChart();
+    drawDrawdownChart();
+    drawSymbolChart();
+    drawScoreRings();
+  }, 100);
+});
+
+window.addEventListener('resize', ()=>{
+  const active = document.querySelector('.page.active');
+  if(active){
+    const id = active.id.replace('page-','');
+    showPage(id, null);
+  }
+});
+</script>
+</body>
+</html>
