@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String            @id @default(cuid())
+  wallet          String            @unique
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  trades          Trade[]
+  positions       Position[]
+  journalNotes    JournalNote[]
+  snapshots       PerformanceSnapshot[]
+  strategyTags    StrategyTag[]
+
+  @@index([wallet])
+}
+
+model Symbol {
+  id      String   @id @default(cuid())
+  name    String   @unique // e.g. SOL-PERP, BTC-USDC
+  type    MarketType
+  trades  Trade[]
+  fees    Fee[]
+}
+
+model Trade {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  symbolId      String
+  symbol        Symbol      @relation(fields: [symbolId], references: [id])
+  direction     Direction
+  entryPrice    Decimal
+  exitPrice     Decimal?
+  size          Decimal
+  leverage      Decimal     @default(1)
+  pnl           Decimal?
+  realizedPnl   Decimal?
+  unrealizedPnl Decimal?
+  fees          Fee[]
+  entryTime     DateTime
+  exitTime      DateTime?
+  duration      Int?        // seconds
+  status        TradeStatus @default(OPEN)
+  journalNotes  JournalNote[]
+  strategyTags  StrategyTagOnTrade[]
+  createdAt     DateTime    @default(now())
+
+  @@index([userId, entryTime])
+  @@index([userId, status])
+}
+
+model Position {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  symbol       String
+  direction    Direction
+  size         Decimal
+  entryPrice   Decimal
+  markPrice    Decimal
+  pnl          Decimal
+  leverage     Decimal    @default(1)
+  liquidation  Decimal?
+  openedAt     DateTime
+  updatedAt    DateTime   @updatedAt
+
+  @@index([userId])
+}
+
+model Fee {
+  id        String   @id @default(cuid())
+  tradeId   String
+  trade     Trade    @relation(fields: [tradeId], references: [id])
+  symbolId  String
+  symbol    Symbol   @relation(fields: [symbolId], references: [id])
+  type      FeeType
+  amount    Decimal
+  timestamp DateTime
+
+  @@index([tradeId])
+}
+
+model StrategyTag {
+  id        String               @id @default(cuid())
+  userId    String
+  user      User                 @relation(fields: [userId], references: [id])
+  name      String
+  color     String               @default("#6366f1")
+  trades    StrategyTagOnTrade[]
+
+  @@unique([userId, name])
+}
+
+model StrategyTagOnTrade {
+  tradeId       String
+  trade         Trade       @relation(fields: [tradeId], references: [id])
+  strategyTagId String
+  strategyTag   StrategyTag @relation(fields: [strategyTagId], references: [id])
+
+  @@id([tradeId, strategyTagId])
+}
+
+model JournalNote {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  tradeId     String?
+  trade       Trade?   @relation(fields: [tradeId], references: [id])
+  content     String
+  screenshot  String?  // URL/path
+  emotion     String?  // e.g. "confident", "fearful"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+model PerformanceSnapshot {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  date        DateTime
+  equity      Decimal
+  pnl         Decimal
+  drawdown    Decimal
+  trades      Int
+  winRate     Decimal
+  riskScore   Decimal?
+
+  @@index([userId, date])
+  @@unique([userId, date])
+}
+
+enum MarketType {
+  SPOT
+  PERP
+  OPTIONS
+}
+
+enum Direction {
+  LONG
+  SHORT
+}
+
+enum TradeStatus {
+  OPEN
+  CLOSED
+  LIQUIDATED
+}
+
+enum FeeType {
+  MAKER
+  TAKER
+  FUNDING
+  LIQUIDATION
+}
